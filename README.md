@@ -6,7 +6,7 @@ end user manual manipulation of the tables. This scripts try to offer a way to s
 
 ## Installation
 
-Only copy to Joomla! CLI folder
+Only copy this files to Joomla! CLI folder.
 
 ## Usage
 

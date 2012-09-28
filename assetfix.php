@@ -54,34 +54,8 @@ class AssetFixCli extends JApplicationCli
 		// Call the parent __construct method so it bootstraps the application class.
 		parent::__construct();
 
-		require_once JPATH_CONFIGURATION . '/configuration.php';
-
-		jimport('joomla.database.database');
-
 		// Add the logger.
-		JLog::addLogger(
-			// Pass an array of configuration options
-			array(
-				// Set the name of the log file
-				'text_file' => JPATH_BASE . '/assetfix.log.php'
-			)
-		);
-
-		// System configuration.
-		$config = JFactory::getConfig();
-
-		// Note, this will throw an exception if there is an error
-		// Creating the database connection.
-		$this->dbo = JDatabase::getInstance(
-			array(
-				'driver' => $config->get('dbtype'),
-				'host' => $config->get('host'),
-				'user' => $config->get('user'),
-				'password' => $config->get('password'),
-				'database' => $config->get('db'),
-				'prefix' => $config->get('dbprefix'),
-			)
-		);
+		JLog::addLogger(array('text_file' => 'assetfix.php'));
 	}
 
 	/**
@@ -104,7 +78,7 @@ class AssetFixCli extends JApplicationCli
 		$this->fixExtensionsAssets();
 
 		// Fixing the categories assets
-		$this->fixCategoryAssets();
+		// $this->fixCategoryAssets();
 
 		// Fixing the content assets
 		$this->fixContentAssets();
@@ -153,6 +127,8 @@ class AssetFixCli extends JApplicationCli
 	 */
 	protected function _copyTable($from, $to = null)
 	{
+		// Initialiase variables.
+		$db = JFactory::getDbo();
 
 		// System configuration.
 		$config = JFactory::getConfig();
@@ -163,19 +139,19 @@ class AssetFixCli extends JApplicationCli
 			$to = $from;
 		}
 
-		$from = preg_replace('/#__/', $this->dbo->getPrefix(), $from);
-		$to = preg_replace('/#__/', $this->dbo->getPrefix(), $to);
+		$from = preg_replace('/#__/', $db->getPrefix(), $from);
+		$to = preg_replace('/#__/', $db->getPrefix(), $to);
 
 		$success = $this->_cloneTable($from, $to);
 
 		if ($success)
 		{
 			$query = 'INSERT INTO ' . $to . ' SELECT * FROM ' . $from;
-			$this->dbo->setQuery($query);
-			$this->dbo->query();
+			$db->setQuery($query);
+			$db->query();
 
 			// Check for query error.
-			$error = $this->dbo->getErrorMsg();
+			$error = $db->getErrorMsg();
 
 			if ($error)
 			{
@@ -202,6 +178,9 @@ class AssetFixCli extends JApplicationCli
 	 */
 	protected function _cloneTable($from, $to = null, $drop = true)
 	{
+		// Initialiase variables.
+		$db = JFactory::getDbo();
+
 		// System configuration.
 		$config = JFactory::getConfig();
 		$database = $config->get('db');
@@ -211,8 +190,8 @@ class AssetFixCli extends JApplicationCli
 			$to = $from;
 		}
 
-		$from = preg_replace('/#__/', $this->dbo->getPrefix(), $from);
-		$to = preg_replace('/#__/', $this->dbo->getPrefix(), $to);
+		$from = preg_replace('/#__/', $db->getPrefix(), $from);
+		$to = preg_replace('/#__/', $db->getPrefix(), $to);
 
 		$exists = $this->_existsTable($from);
 
@@ -223,11 +202,11 @@ class AssetFixCli extends JApplicationCli
 		else
 		{
 			$query = 'CREATE TABLE ' . $to . ' LIKE ' . $from;
-			$this->dbo->setQuery($query);
-			$this->dbo->query();
+			$db->setQuery($query);
+			$db->query();
 
 			// Check for query error.
-			$error = $this->dbo->getErrorMsg();
+			$error = $db->getErrorMsg();
 
 			if ($error)
 			{
@@ -252,15 +231,18 @@ class AssetFixCli extends JApplicationCli
 	 */
 	function _existsTable($table)
 	{
+		// Initialiase variables.
+		$db = JFactory::getDbo();
+
 		// System configuration.
 		$config = JFactory::getConfig();
 		$database = $config->get('db');
 
-		$table = preg_replace('/#__/', $this->dbo->getPrefix(), $table);
+		$table = preg_replace('/#__/', $db->getPrefix(), $table);
 
-		$this->dbo->setQuery('SELECT COUNT(*) AS count FROM information_schema.tables WHERE table_schema = "' . $database . '" AND table_name = "' . $table . '"');
+		$db->setQuery('SELECT COUNT(*) AS count FROM information_schema.tables WHERE table_schema = "' . $database . '" AND table_name = "' . $table . '"');
 
-		return $this->dbo->loadResult();
+		return $db->loadResult();
 	}
 
 	/**
@@ -275,12 +257,15 @@ class AssetFixCli extends JApplicationCli
 	 */
 	function populateDatabase($sqlfile)
 	{
+		// Initialiase variables.
+		$db = JFactory::getDbo();
+
 		if (!($buffer = file_get_contents($sqlfile)))
 		{
 			return -1;
 		}
 
-		$queries = $this->dbo->splitSql($buffer);
+		$queries = $db->splitSql($buffer);
 
 		foreach ($queries as $query)
 		{
@@ -288,11 +273,11 @@ class AssetFixCli extends JApplicationCli
 
 			if ($query != '' && $query {0} != '#')
 			{
-				$this->dbo->setQuery($query);
-				$this->dbo->query();
+				$db->setQuery($query);
+				$db->query();
 
 				// Check for query error.
-				$error = $this->dbo->getErrorMsg();
+				$error = $db->getErrorMsg();
 
 				if ($error)
 				{
@@ -306,7 +291,7 @@ class AssetFixCli extends JApplicationCli
 	}
 
 	/**
-	 * Fix extensions assets
+	 * Fix the assets of extensions table
 	 *
 	 * @return  void
 	 *
@@ -314,52 +299,62 @@ class AssetFixCli extends JApplicationCli
 	 */
 	protected function fixExtensionsAssets()
 	{
-		$this->dbo = JFactory::getDBO();
+		// Initialiase variables.
+		$db = JFactory::getDbo();
+		$query = $db->getQuery(true);
 
-		// Fixing categories assets
-		$query = $this->dbo->getQuery(true);
-		$query->select('name, element');
-		$query->from('#__extensions');
-		$query->where('type = "component"');
-		$query->where('protected = 0');
-		$query->group('element');
-		$this->dbo->setQuery($query);
-		$extensions = $this->dbo->loadObjectList();
+		// Prepare query.
+		$query->select('a.name, a.element');
+		$query->from('#__extensions AS a');
+		$query->where('a.type = "component"');
+		$query->where('a.protected = 0');
+		$query->group('a.element');
 
-		// Getting the asset table
-		$assetfix = JTable::getInstance('asset');
+		// Inject the query and load the extensions.
+		$db->setQuery($query);
+		$extensions = $db->loadObjectList();
 
 		foreach ($extensions as $extension)
 		{
-			$assetfix->id = 0;
-			$assetfix->reset();
+			// Get an instance of the asset table
+			$table = JTable::getInstance('Asset');
 
-			$assetfix->loadByName($extension->element);
+			$table->id = 0;
+			$table->reset();
 
-			if ($assetfix->id == 0)
+			$table->loadByName($extension->element);
+
+			if ($table->id == 0)
 			{
 				// Setting the name and title
-				$assetfix->title = $extension->name;
-				$assetfix->name = $extension->element;
+				$table->title = $extension->name;
+				$table->name = $extension->element;
 
 				// Getting the original rules
-				$query = $this->dbo->getQuery(true);
-				$query->select('rules');
-				$query->from('#__assets_backup');
-				$query->where('name = "' . $extension->element . '"');
-				$this->dbo->setQuery($query);
-				$rules = $this->dbo->loadResult();
-				$assetfix->rules = $rules !== null ? $rules : '{}';
+				$query = $db->getQuery(true);
+
+				// Prepare query.
+				$query->select('a.rules');
+				$query->from('#__assets_backup AS a');
+				$query->where('a.name = "' . $extension->element . '"');
+
+				// Inject the query and load the rules.
+				$db->setQuery($query);
+				$rules = $db->loadResult();
+
+				$table->rules = $rules !== null ? $rules : '{}';
 
 				// Setting the location of the new category
-				$assetfix->setLocation(1, 'last-child');
-				$assetfix->store();
+				$table->setLocation(1, 'last-child');
+
+				// Store the row
+				$table->store();
 			}
 		}
 	}
 
 	/**
-	 * Fix category assets
+	 * Fix the assets of category table
 	 *
 	 * @return  void
 	 *
@@ -367,35 +362,42 @@ class AssetFixCli extends JApplicationCli
 	 */
 	protected function fixCategoryAssets()
 	{
-		$this->dbo = JFactory::getDBO();
+		// Initialiase variables.
+		$db = JFactory::getDbo();
+		$query = $db->getQuery(true);
 
-		// Fixing categories assets
-		$query = $this->dbo->getQuery(true);
+		// Prepare query.
 		$query->select('*');
 		$query->from('#__categories');
 		$query->where('id != 1');
 		$query->order('parent_id');
-		$this->dbo->setQuery($query);
-		$categories = $this->dbo->loadObjectList();
+
+		// Inject the query and load the result.
+		$db->setQuery($query);
+		$categories = $db->loadObjectList();
 
 		foreach ($categories as $category)
 		{
+			// Get an instance of the asset table
+			$table = JTable::getInstance('Asset');
+
 			// Fixing name of the extension
 			$category->extension = $category->extension == 'com_contact_details' ? 'com_contact' : $category->extension;
 
-			// Getting the asset table
-			$assetfix = JTable::getInstance('asset');
-
-			$assetfix->title = $category->title;
-			$assetfix->name = $category->extension . '.category.' . $category->id;
+			$table->title = $category->title;
+			$table->name = $category->extension . '.category.' . $category->id;
 
 			// Getting the original rules
-			$query = $this->dbo->getQuery(true);
-			$query->select('rules');
-			$query->from('#__assets_backup');
-			$query->where('name = "' . $assetfix->name . '"');
-			$this->dbo->setQuery($query);
-			$assetfix->rules = $this->dbo->loadResult();
+			$query = $db->getQuery(true);
+
+			// Prepare query.
+			$query->select('a.rules');
+			$query->from('#__assets_backup AS a');
+			$query->where('a.name = "' . $table->name . '"');
+
+			// Inject the query and load the result.
+			$db->setQuery($query);
+			$rules = $db->loadResult();
 
 			// Setting the parent
 			$parent = 0;
@@ -404,40 +406,54 @@ class AssetFixCli extends JApplicationCli
 			{
 				if ($category->parent_id == 1)
 				{
-					$parentAsset = JTable::getInstance('asset');
+					// Get an instance of the asset table
+					$parentAsset = JTable::getInstance('Asset');
 					$parentAsset->loadByName($category->extension);
+
 					$parent = $parentAsset->id;
 				}
 				elseif ($category->parent_id > 1)
 				{
 					// Getting the correct parent
-					$query = $this->dbo->getQuery(true);
+					$query = $db->getQuery(true);
+
+					// Prepare query.
 					$query->select('a.id');
 					$query->from('#__categories AS c');
 					$query->join('LEFT', '#__assets AS a ON a.title = c.title');
 					$query->where('c.id = ' . (int) $category->parent_id);
-					$this->dbo->setQuery($query);
-					$parent = $this->dbo->loadResult();
+
+					// Inject the query and load the result.
+					$db->setQuery($query);
+					$parent = $db->loadResult();
 				}
 
 				// Setting the location of the new category
-				$assetfix->setLocation($parent, 'last-child');
+				$table->setLocation($parent, 'last-child');
 			}
 
-			$assetfix->store();
+			// Add the rules
+			$table->rules = $rules !== null ? $rules : '{"core.admin":{"7":1},"core.manage":{"6":1},"core.create":[],"core.delete":[],"core.edit":[],"core.edit.state":[]}';
+
+			// Store the row
+			$table->store();
 
 			// Fixing the category asset_id
-			$query = $this->dbo->getQuery(true);
-			$query->update($this->dbo->quoteName('#__categories'));
-			$query->set($this->dbo->quoteName('asset_id') . ' = ' . (int) $assetfix->id);
+			$query = $db->getQuery(true);
+
+			// Prepare query.
+			$query->update($db->quoteName('#__categories'));
+			$query->set($db->quoteName('asset_id') . ' = ' . (int) $table->id);
 			$query->where('id = ' . (int) $category->id);
-			$this->dbo->setQuery($query);
-			$this->dbo->query();
+
+			// Inject the query and load the result.
+			$db->setQuery($query);
+			$db->query();
 		}
 	}
 
 	/**
-	 * Fix contenct assets
+	 * Fix the assets of content table
 	 *
 	 * @return  void
 	 *
@@ -446,31 +462,36 @@ class AssetFixCli extends JApplicationCli
 	protected function fixContentAssets()
 	{
 		// Initialiase variables.
-		$this->dbo = JFactory::getDBO();
+		$db = JFactory::getDbo();
+		$query = $db->getQuery(true);
 
-		// Fixing articles assets
-		$query = $this->dbo->getQuery(true);
+		// Prepare query.
 		$query->select('*');
 		$query->from('#__content');
-		$this->dbo->setQuery($query);
-		$contents = $this->dbo->loadObjectList();
+
+		// Inject the query and load the result.
+		$db->setQuery($query);
+		$contents = $db->loadObjectList();
 
 		foreach ($contents as $article)
 		{
+			// Get an instance of the asset table
+			$table = JTable::getInstance('Asset');
 
-			// Getting the asset table
-			$assetfix = JTable::getInstance('asset');
-
-			$assetfix->title = $article->title;
-			$assetfix->name = 'com_content.article.' . $article->id;
+			$table->title = $article->title;
+			$table->name = 'com_content.article.' . $article->id;
 
 			// Getting the original rules
-			$query = $this->dbo->getQuery(true);
+			$query = $db->getQuery(true);
+
+			// Prepare query.
 			$query->select('rules');
 			$query->from('#__assets_backup');
-			$query->where('name = "' . $assetfix->name . '"');
-			$this->dbo->setQuery($query);
-			$assetfix->rules = $this->dbo->loadResult();
+			$query->where('name = "' . $table->name . '"');
+
+			// Inject the query and load the result.
+			$db->setQuery($query);
+			$rules = $db->loadResult();
 
 			// Setting the parent
 			$parent = 0;
@@ -479,35 +500,49 @@ class AssetFixCli extends JApplicationCli
 			{
 				if ($article->catid == 1)
 				{
-					$parentAsset = JTable::getInstance('asset');
+					// Get an instance of the asset table
+					$parentAsset = JTable::getInstance('Asset');
 					$parentAsset->loadByName('com_content');
+
 					$parent = $parentAsset->id;
 				}
 				elseif ($article->catid > 1)
 				{
 					// Getting the correct parent
-					$query = $this->dbo->getQuery(true);
+					$query = $db->getQuery(true);
+
+					// Prepare query.
 					$query->select('a.id');
 					$query->from('#__categories AS c');
 					$query->join('LEFT', '#__assets AS a ON a.title = c.title');
 					$query->where('c.id = ' . (int) $article->catid);
-					$this->dbo->setQuery($query);
-					$parent = $this->dbo->loadResult();
+
+					// Inject the query and load the result.
+					$db->setQuery($query);
+					$parent = $db->loadResult();
 				}
 
 				// Setting the location of the new category
-				$assetfix->setLocation($parent, 'last-child');
+				$table->setLocation($parent, 'last-child');
 			}
 
-			$assetfix->store();
+			// Add the rules
+			$table->rules = $rules !== null ? $rules : '{"core.delete":{"6":1},"core.edit":{"6":1,"4":1},"core.edit.state":{"6":1,"5":1}}';
+
+			// Store the row
+			$table->store();
 
 			// Fixing the category asset_id
-			$query = $this->dbo->getQuery(true);
-			$query->update($this->dbo->quoteName('#__content'));
-			$query->set($this->dbo->quoteName('asset_id') . ' = ' . (int) $assetfix->id);
+			$query = $db->getQuery(true);
+
+			// Prepare query.
+			$query->update($db->quoteName('#__content'));
+			$query->set($db->quoteName('asset_id') . ' = ' . (int) $table->id);
 			$query->where('id = ' . (int) $article->id);
-			$this->dbo->setQuery($query);
-			$this->dbo->query();
+
+			// Inject the query and load the result.
+			$db->setQuery($query);
+			$db->query();
 		}
 	}
 }

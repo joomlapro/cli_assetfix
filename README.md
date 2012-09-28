@@ -10,8 +10,7 @@ Only copy to Joomla! CLI folder
 
 ## Usage
 
-Run in terminal this command:
-php assetfix.php
+Access the CLI folder of Joomla! and run the command: php assetfix.php
 
 ## Authors
 

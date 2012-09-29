@@ -59,7 +59,7 @@ class AssetFixCli extends JApplicationCli
 	}
 
 	/**
-	 * Entry point for CLI script
+	 * Entry point for CLI script.
 	 *
 	 * @return  void
 	 *
@@ -67,27 +67,36 @@ class AssetFixCli extends JApplicationCli
 	 */
 	protected function doExecute()
 	{
-		// Backup the tables to modify
+		// Backup the tables to modify.
+		$this->out('Creating Backup...');
 		$tables = array('#__assets', '#__categories', '#__content');
 		$this->doBackup($tables);
 
-		// Cleanup the asset table
+		// Cleanup the asset table.
+		$this->out('Populate database with default assets table...');
 		$this->populateDatabase('./sql/assets.sql');
 
-		// Fixing the extensions assets
-		$this->fixExtensionsAssets();
+		// Fixing the extensions assets.
+		// $this->out('Creating extensions assets...');
+		// $this->fixExtensionsAssets();
 
-		// Fixing the categories assets
-		// $this->fixCategoryAssets();
+		// Fixing the categories assets.
+		$this->out('Creating category assets...');
+		$this->fixCategoryAssets();
 
-		// Fixing the content assets
-		$this->fixContentAssets();
+		// Fixing the content assets.
+		// $this->out('Creating content assets...');
+		// $this->fixContentAssets();
+		// $this->out();
+
+		// End message
+		$this->out('Finished assets updates!');
 	}
 
 	/**
 	 * Backup tables
 	 *
-	 * @param   array  $tables  Array with the tables to backup
+	 * @param   array  $tables  Array with the name of tables to backup.
 	 *
 	 * @return  boolean
 	 *
@@ -96,12 +105,11 @@ class AssetFixCli extends JApplicationCli
 	 */
 	protected function doBackup($tables)
 	{
-		// Rename the tables
 		$count = count($tables);
 
 		for ($i = 0; $i < $count; $i++)
 		{
-
+			// Rename the tables.
 			$table = $tables[$i];
 			$rename = $tables[$i] . "_backup";
 
@@ -115,10 +123,10 @@ class AssetFixCli extends JApplicationCli
 	}
 
 	/**
-	 * Copy table to old site to new site
+	 * Copy table to old site to new site.
 	 *
-	 * @param   string  $from  The from
-	 * @param   string  $to    The to
+	 * @param   string  $from  The old table structure.
+	 * @param   string  $to    The new table structure.
 	 *
 	 * @return  boolean
 	 *
@@ -130,46 +138,39 @@ class AssetFixCli extends JApplicationCli
 		// Initialiase variables.
 		$db = JFactory::getDbo();
 
-		// System configuration.
-		$config = JFactory::getConfig();
-		$database = $config->get('db');
-
 		if (!$to)
 		{
 			$to = $from;
 		}
 
-		$from = preg_replace('/#__/', $db->getPrefix(), $from);
-		$to = preg_replace('/#__/', $db->getPrefix(), $to);
-
-		$success = $this->_cloneTable($from, $to);
-
-		if ($success)
+		if ($this->_cloneTable($from, $to))
 		{
-			$query = 'INSERT INTO ' . $to . ' SELECT * FROM ' . $from;
-			$db->setQuery($query);
-			$db->query();
+			// Set the query.
+			$db->setQuery('INSERT INTO ' . $to . ' SELECT * FROM ' . $from);
 
-			// Check for query error.
-			$error = $db->getErrorMsg();
-
-			if ($error)
+			try
 			{
-				throw new Exception($error);
+				$db->execute();
 			}
+			catch (Exception $e)
+			{
+				// Display the error.
+				$this->out($e->getMessage(), true);
 
-			$success = true;
+				// Close the app.
+				$this->close($e->getCode());
+			}
 		}
 
-		return $success;
+		return true;
 	}
 
 	/**
-	 * Clone table structure from old site to new site
+	 * Clone old table structure from.
 	 *
-	 * @param   string  $from  The from
-	 * @param   string  $to    The to
-	 * @param   string  $drop  The drop
+	 * @param   string  $from  The old table structure.
+	 * @param   string  $to    The new table structure.
+	 * @param   string  $drop  Drop the table.
 	 *
 	 * @return  boolean
 	 *
@@ -181,48 +182,41 @@ class AssetFixCli extends JApplicationCli
 		// Initialiase variables.
 		$db = JFactory::getDbo();
 
-		// System configuration.
-		$config = JFactory::getConfig();
-		$database = $config->get('db');
-
 		if (!$to)
 		{
 			$to = $from;
 		}
 
-		$from = preg_replace('/#__/', $db->getPrefix(), $from);
-		$to = preg_replace('/#__/', $db->getPrefix(), $to);
-
-		$exists = $this->_existsTable($from);
-
-		if ($exists == 0)
+		if ($this->_existsTable($from) == 0)
 		{
-			$success = false;
+			return false;
 		}
 		else
 		{
-			$query = 'CREATE TABLE ' . $to . ' LIKE ' . $from;
-			$db->setQuery($query);
-			$db->query();
+			// Set the query.
+			$db->setQuery('CREATE TABLE ' . $to . ' LIKE ' . $from);
 
-			// Check for query error.
-			$error = $db->getErrorMsg();
-
-			if ($error)
+			try
 			{
-				throw new Exception($error);
+				$db->execute();
 			}
+			catch (Exception $e)
+			{
+				// Display the error.
+				$this->out($e->getMessage(), true);
 
-			$success = true;
+				// Close the app.
+				$this->close($e->getCode());
+			}
 		}
 
-		return $success;
+		return true;
 	}
 
 	/**
-	 * Exists table
+	 * Verify if exists table
 	 *
-	 * @param   string  $table  The table
+	 * @param   string  $table  The table name.
 	 *
 	 * @return  boolean
 	 *
@@ -231,18 +225,34 @@ class AssetFixCli extends JApplicationCli
 	 */
 	function _existsTable($table)
 	{
-		// Initialiase variables.
-		$db = JFactory::getDbo();
-
 		// System configuration.
 		$config = JFactory::getConfig();
 		$database = $config->get('db');
 
+		// Initialiase variables.
+		$db = JFactory::getDbo();
+		$query = $db->getQuery(true);
+
 		$table = preg_replace('/#__/', $db->getPrefix(), $table);
 
-		$db->setQuery('SELECT COUNT(*) AS count FROM information_schema.tables WHERE table_schema = "' . $database . '" AND table_name = "' . $table . '"');
+		// Prepare query.
+		$query->select('COUNT(*) AS count');
+		$query->from('information_schema.tables');
+		$query->where('table_schema = "' . $database . '"');
+		$query->where('table_name = "' . $table . '"');
 
-		return $db->loadResult();
+		// Inject the query and load the result.
+		$db->setQuery($query);
+		$result = $db->loadResult();
+
+		// Check for a database error.
+		if ($db->getErrorNum())
+		{
+			JError::raiseWarning(500, $db->getErrorMsg());
+			return null;
+		}
+
+		return $result;
 	}
 
 	/**
@@ -260,7 +270,9 @@ class AssetFixCli extends JApplicationCli
 		// Initialiase variables.
 		$db = JFactory::getDbo();
 
-		if (!($buffer = file_get_contents($sqlfile)))
+		$buffer = file_get_contents($sqlfile);
+
+		if ($buffer)
 		{
 			return -1;
 		}
@@ -273,17 +285,21 @@ class AssetFixCli extends JApplicationCli
 
 			if ($query != '' && $query {0} != '#')
 			{
+				// Set the query.
 				$db->setQuery($query);
-				$db->query();
 
-				// Check for query error.
-				$error = $db->getErrorMsg();
-
-				if ($error)
+				try
 				{
-					throw new Exception($error);
+					$db->query();
 				}
+				catch (Exception $e)
+				{
+					// Display the error.
+					$this->out($e->getMessage(), true);
 
+					// Close the app.
+					$this->close($e->getCode());
+				}
 			}
 		}
 
@@ -370,7 +386,6 @@ class AssetFixCli extends JApplicationCli
 		$query->select('*');
 		$query->from('#__categories');
 		$query->where('id != 1');
-		$query->order('parent_id');
 
 		// Inject the query and load the result.
 		$db->setQuery($query);
@@ -381,9 +396,6 @@ class AssetFixCli extends JApplicationCli
 			// Get an instance of the asset table
 			$table = JTable::getInstance('Asset');
 
-			// Fixing name of the extension
-			$category->extension = $category->extension == 'com_contact_details' ? 'com_contact' : $category->extension;
-
 			$table->title = $category->title;
 			$table->name = $category->extension . '.category.' . $category->id;
 
@@ -391,9 +403,9 @@ class AssetFixCli extends JApplicationCli
 			$query = $db->getQuery(true);
 
 			// Prepare query.
-			$query->select('a.rules');
-			$query->from('#__assets_backup AS a');
-			$query->where('a.name = "' . $table->name . '"');
+			$query->select('rules');
+			$query->from('#__assets_backup');
+			$query->where('name = "' . $table->name . '"');
 
 			// Inject the query and load the result.
 			$db->setQuery($query);
@@ -419,14 +431,16 @@ class AssetFixCli extends JApplicationCli
 
 					// Prepare query.
 					$query->select('a.id');
-					$query->from('#__categories AS c');
-					$query->join('LEFT', '#__assets AS a ON a.title = c.title');
+					$query->from('#__assets AS a');
+					$query->join('LEFT', '#__categories AS c ON c.title = a.title');
 					$query->where('c.id = ' . (int) $category->parent_id);
 
 					// Inject the query and load the result.
 					$db->setQuery($query);
 					$parent = $db->loadResult();
 				}
+
+				$table->id = $category->asset_id;
 
 				// Setting the location of the new category
 				$table->setLocation($parent, 'last-child');
@@ -443,7 +457,7 @@ class AssetFixCli extends JApplicationCli
 
 			// Prepare query.
 			$query->update($db->quoteName('#__categories'));
-			$query->set($db->quoteName('asset_id') . ' = ' . (int) $table->id);
+			$query->set($db->quoteName('asset_id') . ' = 1' . (int) $table->id);
 			$query->where('id = ' . (int) $category->id);
 
 			// Inject the query and load the result.

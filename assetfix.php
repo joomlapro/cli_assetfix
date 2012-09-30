@@ -51,6 +51,9 @@ class AssetFixCli extends JApplicationCli
 	 */
 	public function __construct()
 	{
+		// Import the dependencies
+		jimport('joomla.table.asset');
+
 		// Call the parent __construct method so it bootstraps the application class.
 		parent::__construct();
 
@@ -272,7 +275,7 @@ class AssetFixCli extends JApplicationCli
 
 		$buffer = file_get_contents($sqlfile);
 
-		if ($buffer)
+		if (!$buffer)
 		{
 			return -1;
 		}
@@ -290,7 +293,7 @@ class AssetFixCli extends JApplicationCli
 
 				try
 				{
-					$db->query();
+					$db->execute();
 				}
 				catch (Exception $e)
 				{
@@ -307,7 +310,7 @@ class AssetFixCli extends JApplicationCli
 	}
 
 	/**
-	 * Fix the assets of extensions table
+	 * Fix the assets of extensions table.
 	 *
 	 * @return  void
 	 *
@@ -320,51 +323,55 @@ class AssetFixCli extends JApplicationCli
 		$query = $db->getQuery(true);
 
 		// Prepare query.
-		$query->select('a.name, a.element');
-		$query->from('#__extensions AS a');
-		$query->where('a.type = "component"');
-		$query->where('a.protected = 0');
-		$query->group('a.element');
+		$query->select('name, element');
+		$query->from('#__extensions');
+		$query->where('type = "component"');
+		$query->where('protected = 0');
+		$query->group('element');
 
 		// Inject the query and load the extensions.
 		$db->setQuery($query);
 		$extensions = $db->loadObjectList();
 
+		// Get an instance of the asset table.
+		$asset = JTable::getInstance('Asset');
+
 		foreach ($extensions as $extension)
 		{
-			// Get an instance of the asset table
-			$table = JTable::getInstance('Asset');
+			$asset->id = 0;
 
-			$table->id = 0;
-			$table->reset();
+			// Reset class properties.
+			$asset->reset();
 
-			$table->loadByName($extension->element);
+			// Load an asset by name.
+			$asset->loadByName($extension->element);
 
-			if ($table->id == 0)
+			if ($asset->id == 0)
 			{
-				// Setting the name and title
-				$table->title = $extension->name;
-				$table->name = $extension->element;
+				// Setting the name and title.
+				$asset->name = $extension->element;
+				$asset->title = $extension->name;
 
-				// Getting the original rules
+				// Getting the original rules.
 				$query = $db->getQuery(true);
 
 				// Prepare query.
-				$query->select('a.rules');
-				$query->from('#__assets_backup AS a');
-				$query->where('a.name = "' . $extension->element . '"');
+				$query->select('rules');
+				$query->from('#__assets_backup');
+				$query->where('name = "' . $extension->element . '"');
 
-				// Inject the query and load the rules.
+				// Inject the query and load the result.
 				$db->setQuery($query);
 				$rules = $db->loadResult();
 
-				$table->rules = $rules !== null ? $rules : '{}';
+				// Add the rules.
+				$asset->rules = $rules !== null ? $rules : '{"core.admin":{"7":1},"core.manage":{"6":1},"core.create":[],"core.delete":[],"core.edit":[],"core.edit.state":[],"core.edit.own":[]}';
 
-				// Setting the location of the new category
-				$table->setLocation(1, 'last-child');
+				// Setting the location of the new extension.
+				$asset->setLocation(1, 'last-child');
 
-				// Store the row
-				$table->store();
+				// Store the row.
+				$asset->store();
 			}
 		}
 	}
@@ -386,18 +393,30 @@ class AssetFixCli extends JApplicationCli
 		$query->select('*');
 		$query->from('#__categories');
 		$query->where('id != 1');
+		$query->order('parent_id');
 
-		// Inject the query and load the result.
+		// Inject the query and load the categories.
 		$db->setQuery($query);
 		$categories = $db->loadObjectList();
 
 		foreach ($categories as $category)
 		{
-			// Get an instance of the asset table
-			$table = JTable::getInstance('Asset');
+			// Get an instance of the asset table.
+			$asset = JTable::getInstance('Asset');
 
-			$table->title = $category->title;
-			$table->name = $category->extension . '.category.' . $category->id;
+			$asset->id = 0;
+
+			// Reset class properties.
+			$asset->reset();
+
+			// Load an asset by name.
+			$asset->loadByName($category->extension);
+
+			$asset->name = $category->extension . '.category.' . (int) $category->id;
+			$asset->title = $category->title;
+
+			var_dump($asset->name);
+
 
 			// Getting the original rules
 			$query = $db->getQuery(true);
@@ -405,7 +424,7 @@ class AssetFixCli extends JApplicationCli
 			// Prepare query.
 			$query->select('rules');
 			$query->from('#__assets_backup');
-			$query->where('name = "' . $table->name . '"');
+			$query->where('name = "' . $asset->name . '"');
 
 			// Inject the query and load the result.
 			$db->setQuery($query);
@@ -431,8 +450,8 @@ class AssetFixCli extends JApplicationCli
 
 					// Prepare query.
 					$query->select('a.id');
-					$query->from('#__assets AS a');
-					$query->join('LEFT', '#__categories AS c ON c.title = a.title');
+					$query->from('#__categories AS c');
+					$query->join('LEFT', '#__assets AS a ON a.title = c.title');
 					$query->where('c.id = ' . (int) $category->parent_id);
 
 					// Inject the query and load the result.
@@ -440,24 +459,23 @@ class AssetFixCli extends JApplicationCli
 					$parent = $db->loadResult();
 				}
 
-				$table->id = $category->asset_id;
-
-				// Setting the location of the new category
-				$table->setLocation($parent, 'last-child');
+				// Setting the location of the new category.
+				$asset->setLocation($parent, 'last-child');
 			}
 
 			// Add the rules
-			$table->rules = $rules !== null ? $rules : '{"core.admin":{"7":1},"core.manage":{"6":1},"core.create":[],"core.delete":[],"core.edit":[],"core.edit.state":[]}';
+			$asset->rules = $rules !== null ? $rules : '{"core.admin":{"7":1},"core.manage":{"6":1},"core.create":[],"core.delete":[],"core.edit":[],"core.edit.state":[]}';
 
-			// Store the row
-			$table->store();
+
+			// Store the row.
+			$asset->store();
 
 			// Fixing the category asset_id
 			$query = $db->getQuery(true);
 
 			// Prepare query.
 			$query->update($db->quoteName('#__categories'));
-			$query->set($db->quoteName('asset_id') . ' = 1' . (int) $table->id);
+			$query->set($db->quoteName('asset_id') . ' = ' . (int) $asset->id);
 			$query->where('id = ' . (int) $category->id);
 
 			// Inject the query and load the result.

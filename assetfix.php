@@ -80,17 +80,17 @@ class AssetFixCli extends JApplicationCli
 		$this->populateDatabase('./sql/assets.sql');
 
 		// Fixing the extensions assets.
-		// $this->out('Creating extensions assets...');
-		// $this->fixExtensionsAssets();
+		$this->out('Creating extensions assets...');
+		$this->fixExtensionsAssets();
 
 		// Fixing the categories assets.
 		$this->out('Creating category assets...');
 		$this->fixCategoryAssets();
 
 		// Fixing the content assets.
-		// $this->out('Creating content assets...');
-		// $this->fixContentAssets();
-		// $this->out();
+		$this->out('Creating content assets...');
+		$this->fixContentAssets();
+		$this->out();
 
 		// End message
 		$this->out('Finished assets updates!');
@@ -393,7 +393,6 @@ class AssetFixCli extends JApplicationCli
 		$query->select('*');
 		$query->from('#__categories');
 		$query->where('id != 1');
-		$query->order('parent_id');
 
 		// Inject the query and load the categories.
 		$db->setQuery($query);
@@ -401,22 +400,18 @@ class AssetFixCli extends JApplicationCli
 
 		foreach ($categories as $category)
 		{
+			// Fixing name of the extension
+			$category->extension = $category->extension == 'com_contact_details' ? 'com_contact' : $category->extension;
+
 			// Get an instance of the asset table.
 			$asset = JTable::getInstance('Asset');
 
-			$asset->id = 0;
-
-			// Reset class properties.
-			$asset->reset();
-
 			// Load an asset by name.
-			$asset->loadByName($category->extension);
+			$name = $category->extension . '.category.' . (int) $category->id;
+			$asset->loadByName($name);
 
-			$asset->name = $category->extension . '.category.' . (int) $category->id;
 			$asset->title = $category->title;
-
-			var_dump($asset->name);
-
+			$asset->name = $name;
 
 			// Getting the original rules
 			$query = $db->getQuery(true);
@@ -430,11 +425,11 @@ class AssetFixCli extends JApplicationCli
 			$db->setQuery($query);
 			$rules = $db->loadResult();
 
-			// Setting the parent
-			$parent = 0;
-
 			if ($category->parent_id !== false)
 			{
+				// Setting the parent
+				$parent = 0;
+
 				if ($category->parent_id == 1)
 				{
 					// Get an instance of the asset table
@@ -459,13 +454,12 @@ class AssetFixCli extends JApplicationCli
 					$parent = $db->loadResult();
 				}
 
-				// Setting the location of the new category.
+				// Setting the location of the new category
 				$asset->setLocation($parent, 'last-child');
 			}
 
 			// Add the rules
 			$asset->rules = $rules !== null ? $rules : '{"core.admin":{"7":1},"core.manage":{"6":1},"core.create":[],"core.delete":[],"core.edit":[],"core.edit.state":[]}';
-
 
 			// Store the row.
 			$asset->store();

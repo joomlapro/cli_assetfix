@@ -111,7 +111,7 @@ class AssetFixCli extends JApplicationCli
 		for ($i = 0; $i < $count; $i++)
 		{
 			// Rename the tables.
-			$table = $tables[$i];
+			$table  = $tables[$i];
 			$rename = $tables[$i] . "_backup";
 
 			$exists = $this->_existsTable($rename);
@@ -227,14 +227,14 @@ class AssetFixCli extends JApplicationCli
 	function _existsTable($table)
 	{
 		// System configuration.
-		$config = JFactory::getConfig();
+		$config   = JFactory::getConfig();
 		$database = $config->get('db');
 
 		// Initialiase variables.
-		$db = JFactory::getDbo();
-		$query = $db->getQuery(true);
+		$db       = JFactory::getDbo();
+		$query    = $db->getQuery(true);
 
-		$table = preg_replace('/#__/', $db->getPrefix(), $table);
+		$table    = preg_replace('/#__/', $db->getPrefix(), $table);
 
 		// Prepare query.
 		$query->select('COUNT(*) AS count');
@@ -269,8 +269,7 @@ class AssetFixCli extends JApplicationCli
 	function populateDatabase($sqlfile)
 	{
 		// Initialiase variables.
-		$db = JFactory::getDbo();
-
+		$db     = JFactory::getDbo();
 		$buffer = file_get_contents($sqlfile);
 
 		if (!$buffer)
@@ -317,7 +316,7 @@ class AssetFixCli extends JApplicationCli
 	protected function fixExtensionsAssets()
 	{
 		// Initialiase variables.
-		$db = JFactory::getDbo();
+		$db    = JFactory::getDbo();
 		$query = $db->getQuery(true);
 
 		// Prepare query.
@@ -347,7 +346,7 @@ class AssetFixCli extends JApplicationCli
 			if ($asset->id == 0)
 			{
 				// Setting the name and title.
-				$asset->name = $extension->element;
+				$asset->name  = $extension->element;
 				$asset->title = $extension->name;
 
 				// Getting the original rules.
@@ -384,7 +383,7 @@ class AssetFixCli extends JApplicationCli
 	protected function fixCategoryAssets()
 	{
 		// Initialiase variables.
-		$db = JFactory::getDbo();
+		$db    = JFactory::getDbo();
 		$query = $db->getQuery(true);
 
 		// Prepare query.
@@ -405,11 +404,11 @@ class AssetFixCli extends JApplicationCli
 			$asset = JTable::getInstance('Asset');
 
 			// Load an asset by name.
-			$name = $category->extension . '.category.' . (int) $category->id;
+			$name  = $category->extension . '.category.' . (int) $category->id;
 			$asset->loadByName($name);
 
 			$asset->title = $category->title;
-			$asset->name = $name;
+			$asset->name  = $name;
 
 			// Getting the original rules.
 			$query = $db->getQuery(true);
@@ -486,7 +485,7 @@ class AssetFixCli extends JApplicationCli
 	protected function fixContentAssets()
 	{
 		// Initialiase variables.
-		$db = JFactory::getDbo();
+		$db    = JFactory::getDbo();
 		$query = $db->getQuery(true);
 
 		// Prepare query.
@@ -503,7 +502,7 @@ class AssetFixCli extends JApplicationCli
 			$table = JTable::getInstance('Asset');
 
 			$table->title = $article->title;
-			$table->name = 'com_content.article.' . $article->id;
+			$table->name  = 'com_content.article.' . $article->id;
 
 			// Getting the original rules.
 			$query = $db->getQuery(true);

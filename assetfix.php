@@ -545,7 +545,7 @@ class AssetFixCli extends JApplicationCli
 					$parent = $db->loadResult();
 				}
 
-				// Setting the location of the new category.
+				// Setting the location of the new content.
 				$table->setLocation($parent, 'last-child');
 			}
 
@@ -555,7 +555,7 @@ class AssetFixCli extends JApplicationCli
 			// Store the row.
 			$table->store();
 
-			// Fixing the category asset_id.
+			// Fixing the content asset_id.
 			$query = $db->getQuery(true);
 
 			// Prepare query.

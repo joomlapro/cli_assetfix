@@ -1,8 +1,8 @@
 <?php
 /**
- * @package    Joomla.Assetfix
+ * @package    Joomla.Cli
  *
- * @copyright  Copyright (C) 2012 AtomTech, Inc. All rights reserved.
+ * @copyright  Copyright (C) 2013 AtomTech, Inc. All rights reserved.
  * @license    GNU General Public License version 2 or later; see LICENSE.txt
  */
 
@@ -27,9 +27,6 @@ require_once JPATH_LIBRARIES . '/import.legacy.php';
 // Bootstrap the CMS libraries.
 require_once JPATH_LIBRARIES . '/cms.php';
 
-// Import the configuration.
-require_once JPATH_CONFIGURATION . '/configuration.php';
-
 // Configure error reporting to maximum for CLI output.
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -37,8 +34,8 @@ ini_set('display_errors', 1);
 /**
  * This class checks some common situations that occur when the asset table is corrupted.
  *
- * @package  Joomla.Assetfix
- * @since    3.0
+ * @package  Joomla.Cli
+ * @since    3.1
  */
 class AssetFixCli extends JApplicationCli
 {
@@ -47,11 +44,11 @@ class AssetFixCli extends JApplicationCli
 	 *
 	 * This method should include your custom code that runs the application.
 	 *
-	 * @since   11.3
+	 * @since   3.1
 	 */
 	public function __construct()
 	{
-		// Import the dependencies
+		// Import the dependencies.
 		jimport('joomla.table.asset');
 
 		// Call the parent __construct method so it bootstraps the application class.
@@ -66,7 +63,7 @@ class AssetFixCli extends JApplicationCli
 	 *
 	 * @return  void
 	 *
-	 * @since   3.0
+	 * @since   3.1
 	 */
 	protected function doExecute()
 	{
@@ -92,18 +89,18 @@ class AssetFixCli extends JApplicationCli
 		$this->fixContentAssets();
 		$this->out();
 
-		// End message
+		// End message.
 		$this->out('Finished assets updates!');
 	}
 
 	/**
-	 * Backup tables
+	 * Backup tables.
 	 *
 	 * @param   array  $tables  Array with the name of tables to backup.
 	 *
 	 * @return  boolean
 	 *
-	 * @since   3.0
+	 * @since   3.1
 	 * @throws  Exception
 	 */
 	protected function doBackup($tables)
@@ -133,8 +130,8 @@ class AssetFixCli extends JApplicationCli
 	 *
 	 * @return  boolean
 	 *
-	 * @since   3.0
-	 * @throws	Exception
+	 * @since   3.1
+	 * @throws  Exception
 	 */
 	protected function _copyTable($from, $to = null)
 	{
@@ -177,7 +174,7 @@ class AssetFixCli extends JApplicationCli
 	 *
 	 * @return  boolean
 	 *
-	 * @since   3.0
+	 * @since   3.1
 	 * @throws  Exception
 	 */
 	protected function _cloneTable($from, $to = null, $drop = true)
@@ -217,13 +214,13 @@ class AssetFixCli extends JApplicationCli
 	}
 
 	/**
-	 * Verify if exists table
+	 * Verify if exists table.
 	 *
 	 * @param   string  $table  The table name.
 	 *
 	 * @return  boolean
 	 *
-	 * @since   3.0
+	 * @since   3.1
 	 * @throws  Exception
 	 */
 	function _existsTable($table)
@@ -259,14 +256,14 @@ class AssetFixCli extends JApplicationCli
 	}
 
 	/**
-	 * Populate database
+	 * Populate database.
 	 *
-	 * @param   string  $sqlfile  The sql file
+	 * @param   string  $sqlfile  The sql file.
 	 *
 	 * @return  boolean
 	 *
-	 * @since   3.0
-	 * @throws	Exception
+	 * @since   3.1
+	 * @throws  Exception
 	 */
 	function populateDatabase($sqlfile)
 	{
@@ -314,7 +311,7 @@ class AssetFixCli extends JApplicationCli
 	 *
 	 * @return  void
 	 *
-	 * @since   3.0
+	 * @since   3.1
 	 */
 	protected function fixExtensionsAssets()
 	{
@@ -377,11 +374,11 @@ class AssetFixCli extends JApplicationCli
 	}
 
 	/**
-	 * Fix the assets of category table
+	 * Fix the assets of category table.
 	 *
 	 * @return  void
 	 *
-	 * @since   3.0
+	 * @since   3.1
 	 */
 	protected function fixCategoryAssets()
 	{
@@ -400,7 +397,7 @@ class AssetFixCli extends JApplicationCli
 
 		foreach ($categories as $category)
 		{
-			// Fixing name of the extension
+			// Fixing name of the extension.
 			$category->extension = $category->extension == 'com_contact_details' ? 'com_contact' : $category->extension;
 
 			// Get an instance of the asset table.
@@ -413,7 +410,7 @@ class AssetFixCli extends JApplicationCli
 			$asset->title = $category->title;
 			$asset->name = $name;
 
-			// Getting the original rules
+			// Getting the original rules.
 			$query = $db->getQuery(true);
 
 			// Prepare query.
@@ -427,12 +424,12 @@ class AssetFixCli extends JApplicationCli
 
 			if ($category->parent_id !== false)
 			{
-				// Setting the parent
+				// Setting the parent.
 				$parent = 0;
 
 				if ($category->parent_id == 1)
 				{
-					// Get an instance of the asset table
+					// Get an instance of the asset table.
 					$parentAsset = JTable::getInstance('Asset');
 					$parentAsset->loadByName($category->extension);
 
@@ -440,7 +437,7 @@ class AssetFixCli extends JApplicationCli
 				}
 				elseif ($category->parent_id > 1)
 				{
-					// Getting the correct parent
+					// Getting the correct parent.
 					$query = $db->getQuery(true);
 
 					// Prepare query.
@@ -454,17 +451,17 @@ class AssetFixCli extends JApplicationCli
 					$parent = $db->loadResult();
 				}
 
-				// Setting the location of the new category
+				// Setting the location of the new category.
 				$asset->setLocation($parent, 'last-child');
 			}
 
-			// Add the rules
+			// Add the rules.
 			$asset->rules = $rules !== null ? $rules : '{"core.admin":{"7":1},"core.manage":{"6":1},"core.create":[],"core.delete":[],"core.edit":[],"core.edit.state":[]}';
 
 			// Store the row.
 			$asset->store();
 
-			// Fixing the category asset_id
+			// Fixing the category asset_id.
 			$query = $db->getQuery(true);
 
 			// Prepare query.
@@ -479,11 +476,11 @@ class AssetFixCli extends JApplicationCli
 	}
 
 	/**
-	 * Fix the assets of content table
+	 * Fix the assets of content table.
 	 *
 	 * @return  void
 	 *
-	 * @since   3.0
+	 * @since   3.1
 	 */
 	protected function fixContentAssets()
 	{
@@ -501,13 +498,13 @@ class AssetFixCli extends JApplicationCli
 
 		foreach ($contents as $article)
 		{
-			// Get an instance of the asset table
+			// Get an instance of the asset table.
 			$table = JTable::getInstance('Asset');
 
 			$table->title = $article->title;
 			$table->name = 'com_content.article.' . $article->id;
 
-			// Getting the original rules
+			// Getting the original rules.
 			$query = $db->getQuery(true);
 
 			// Prepare query.
@@ -519,14 +516,14 @@ class AssetFixCli extends JApplicationCli
 			$db->setQuery($query);
 			$rules = $db->loadResult();
 
-			// Setting the parent
+			// Setting the parent.
 			$parent = 0;
 
 			if ($article->catid !== false)
 			{
 				if ($article->catid == 1)
 				{
-					// Get an instance of the asset table
+					// Get an instance of the asset table.
 					$parentAsset = JTable::getInstance('Asset');
 					$parentAsset->loadByName('com_content');
 
@@ -534,7 +531,7 @@ class AssetFixCli extends JApplicationCli
 				}
 				elseif ($article->catid > 1)
 				{
-					// Getting the correct parent
+					// Getting the correct parent.
 					$query = $db->getQuery(true);
 
 					// Prepare query.
@@ -548,17 +545,17 @@ class AssetFixCli extends JApplicationCli
 					$parent = $db->loadResult();
 				}
 
-				// Setting the location of the new category
+				// Setting the location of the new category.
 				$table->setLocation($parent, 'last-child');
 			}
 
-			// Add the rules
+			// Add the rules.
 			$table->rules = $rules !== null ? $rules : '{"core.delete":{"6":1},"core.edit":{"6":1,"4":1},"core.edit.state":{"6":1,"5":1}}';
 
-			// Store the row
+			// Store the row.
 			$table->store();
 
-			// Fixing the category asset_id
+			// Fixing the category asset_id.
 			$query = $db->getQuery(true);
 
 			// Prepare query.

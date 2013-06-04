@@ -9,7 +9,7 @@
 // We are a valid entry point.
 const _JEXEC = 1;
 
-// Load system defines
+// Load system defines.
 if (file_exists(dirname(__DIR__) . '/defines.php'))
 {
 	require_once dirname(__DIR__) . '/defines.php';
@@ -73,20 +73,20 @@ class AssetFixCli extends JApplicationCli
 		$this->doBackup($tables);
 
 		// Cleanup the asset table.
-		$this->out('Populate database with default assets table...');
-		$this->populateDatabase('./sql/assets.sql');
+		$this->out('Populate database with default assets table...')
+			->populateDatabase('./sql/assets.sql');
 
 		// Fixing the extensions assets.
-		$this->out('Creating extensions assets...');
-		$this->fixExtensionsAssets();
+		$this->out('Creating extensions assets...')
+			->fixExtensionsAssets();
 
 		// Fixing the categories assets.
-		$this->out('Creating category assets...');
-		$this->fixCategoryAssets();
+		$this->out('Creating category assets...')
+			->fixCategoryAssets();
 
 		// Fixing the content assets.
-		$this->out('Creating content assets...');
-		$this->fixContentAssets();
+		$this->out('Creating content assets...')
+			->fixContentAssets();
 
 		$this->out();
 
@@ -237,10 +237,10 @@ class AssetFixCli extends JApplicationCli
 		$table    = preg_replace('/#__/', $db->getPrefix(), $table);
 
 		// Prepare query.
-		$query->select('COUNT(*) AS count');
-		$query->from('information_schema.tables');
-		$query->where('table_schema = "' . $database . '"');
-		$query->where('table_name = "' . $table . '"');
+		$query->select('COUNT(*) AS count')
+			->from('information_schema.tables')
+			->where('table_schema = "' . $database . '"')
+			->where('table_name = "' . $table . '"');
 
 		// Inject the query and load the result.
 		$db->setQuery($query);
@@ -320,11 +320,11 @@ class AssetFixCli extends JApplicationCli
 		$query = $db->getQuery(true);
 
 		// Prepare query.
-		$query->select('name, element');
-		$query->from('#__extensions');
-		$query->where('type = "component"');
-		$query->where('protected = 0');
-		$query->group('element');
+		$query->select('name, element')
+			->from('#__extensions')
+			->where('type = "component"')
+			->where('protected = 0')
+			->group('element');
 
 		// Inject the query and load the extensions.
 		$db->setQuery($query);
@@ -353,9 +353,9 @@ class AssetFixCli extends JApplicationCli
 				$query = $db->getQuery(true);
 
 				// Prepare query.
-				$query->select('rules');
-				$query->from('#__assets_backup');
-				$query->where('name = "' . $extension->element . '"');
+				$query->select('rules')
+					->from('#__assets_backup')
+					->where('name = "' . $extension->element . '"');
 
 				// Inject the query and load the result.
 				$db->setQuery($query);
@@ -414,9 +414,9 @@ class AssetFixCli extends JApplicationCli
 			$query = $db->getQuery(true);
 
 			// Prepare query.
-			$query->select('rules');
-			$query->from('#__assets_backup');
-			$query->where('name = "' . $asset->name . '"');
+			$query->select('rules')
+				->from('#__assets_backup')
+				->where('name = "' . $asset->name . '"');
 
 			// Inject the query and load the result.
 			$db->setQuery($query);
@@ -441,10 +441,10 @@ class AssetFixCli extends JApplicationCli
 					$query = $db->getQuery(true);
 
 					// Prepare query.
-					$query->select('a.id');
-					$query->from('#__categories AS c');
-					$query->join('LEFT', '#__assets AS a ON a.title = c.title');
-					$query->where('c.id = ' . (int) $category->parent_id);
+					$query->select('a.id')
+						->from('#__categories AS c')
+						->join('LEFT', '#__assets AS a ON a.title = c.title')
+						->where('c.id = ' . (int) $category->parent_id);
 
 					// Inject the query and load the result.
 					$db->setQuery($query);
@@ -465,13 +465,13 @@ class AssetFixCli extends JApplicationCli
 			$query = $db->getQuery(true);
 
 			// Prepare query.
-			$query->update($db->quoteName('#__categories'));
-			$query->set($db->quoteName('asset_id') . ' = ' . (int) $asset->id);
-			$query->where('id = ' . (int) $category->id);
+			$query->update($db->quoteName('#__categories'))
+				->set($db->quoteName('asset_id') . ' = ' . (int) $asset->id)
+				->where('id = ' . (int) $category->id);
 
 			// Inject the query and load the result.
-			$db->setQuery($query);
-			$db->query();
+			$db->setQuery($query)
+				->query();
 		}
 	}
 
@@ -489,8 +489,8 @@ class AssetFixCli extends JApplicationCli
 		$query = $db->getQuery(true);
 
 		// Prepare query.
-		$query->select('*');
-		$query->from('#__content');
+		$query->select('*')
+			->from('#__content');
 
 		// Inject the query and load the result.
 		$db->setQuery($query);
@@ -508,9 +508,9 @@ class AssetFixCli extends JApplicationCli
 			$query = $db->getQuery(true);
 
 			// Prepare query.
-			$query->select('rules');
-			$query->from('#__assets_backup');
-			$query->where('name = "' . $table->name . '"');
+			$query->select('rules')
+				->from('#__assets_backup')
+				->where('name = "' . $table->name . '"');
 
 			// Inject the query and load the result.
 			$db->setQuery($query);
@@ -535,10 +535,10 @@ class AssetFixCli extends JApplicationCli
 					$query = $db->getQuery(true);
 
 					// Prepare query.
-					$query->select('a.id');
-					$query->from('#__categories AS c');
-					$query->join('LEFT', '#__assets AS a ON a.title = c.title');
-					$query->where('c.id = ' . (int) $article->catid);
+					$query->select('a.id')
+						->from('#__categories AS c')
+						->join('LEFT', '#__assets AS a ON a.title = c.title')
+						->where('c.id = ' . (int) $article->catid);
 
 					// Inject the query and load the result.
 					$db->setQuery($query);
@@ -559,13 +559,13 @@ class AssetFixCli extends JApplicationCli
 			$query = $db->getQuery(true);
 
 			// Prepare query.
-			$query->update($db->quoteName('#__content'));
-			$query->set($db->quoteName('asset_id') . ' = ' . (int) $table->id);
-			$query->where('id = ' . (int) $article->id);
+			$query->update($db->quoteName('#__content'))
+				->set($db->quoteName('asset_id') . ' = ' . (int) $table->id)
+				->where('id = ' . (int) $article->id);
 
 			// Inject the query and load the result.
-			$db->setQuery($query);
-			$db->query();
+			$db->setQuery($query)
+				->query();
 		}
 	}
 }

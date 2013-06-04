@@ -87,6 +87,7 @@ class AssetFixCli extends JApplicationCli
 		// Fixing the content assets.
 		$this->out('Creating content assets...');
 		$this->fixContentAssets();
+
 		$this->out();
 
 		// End message.
